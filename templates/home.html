@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Campus Tools{% endblock %}
+{% block content %}
+<h1>Your semester,<br>sorted.</h1>
+<p class="subtitle">Quick tools for the stuff you check every week.</p>
+<ul class="tool-links">
+  <li>
+    <a href="/attendance/">
+      <span>Attendance
+        <span class="desc">Check your % and safe bunks left</span>
+      </span>
+      <span class="arrow">→</span>
+    </a>
+  </li>
+  <li>
+    <a href="/marks/">
+      <span>Internal Marks
+        <span class="desc">Series test 1 + 2, scaled instantly</span>
+      </span>
+      <span class="arrow">→</span>
+    </a>
+  </li>
+</ul>
+{% endblock %}

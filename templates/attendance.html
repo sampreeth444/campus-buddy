@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Calculator{% endblock %}
+{% block content %}
+{% if error %}<p style="color:#FF3D71; font-weight:600;">{{ error }}</p>{% endif %}
+<style>:root { --accent: #3D5AFE; --accent-bg: #3D5AFE; }</style>
+<h1>Attendance<br>check</h1>
+<p class="subtitle">See where you stand right now.</p>
+<form method="POST" class="card">
+  {% csrf_token %}
+  <div class="field">
+    <label>Total classes held</label>
+    <input type="number" name="total" step="1" min="0" required>
+  </div>
+  <div class="field">
+    <label>Classes attended</label>
+    <input type="number" name="attended" step="1" min="0" required>
+  </div>
+  <button type="submit">Calculate</button>
+</form>
+
+{% if result %}
+<div class="result" style="background: {% if result.percentage < 75 %}#FF3D71{% else %}#3D5AFE{% endif %};">
+  <p class="result-figure">{{ result.percentage }}%</p>
+  <p class="result-label">Your current attendance</p>
+
+  {% if result.classes_needed > 0 %}
+    <div class="result-line">
+      <span>Must attend in a row to hit 75%</span>
+      <strong>{{ result.classes_needed }}</strong>
+    </div>
+  {% else %}
+    <div class="result-line">
+      <span>Classes you can still skip</span>
+      <strong>{{ result.classes_can_miss }}</strong>
+    </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<a href="/" class="back-link">← Back to home</a>
+{% endblock %}

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Campus Tools{% endblock %}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #F7F7FB;
+    --ink: #111319;
+    --ink-soft: #63677A;
+    --indigo: #3D5AFE;
+    --coral: #FF3D71;
+    --yellow: #FFD23F;
+    --card: #FFFFFF;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { max-width: 520px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  .masthead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+  }
+  .masthead a {
+    text-decoration: none;
+    color: var(--ink);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+  }
+  .masthead span {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: var(--card);
+    border: 2px solid var(--ink);
+    padding: 4px 10px;
+    border-radius: 100px;
+  }
+
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 6px;
+    line-height: 1.1;
+  }
+  .subtitle { color: var(--ink-soft); font-size: 15px; margin: 0 0 28px; }
+
+  .card {
+    background: var(--card);
+    border: 3px solid var(--ink);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 7px 7px 0 var(--ink);
+    margin-bottom: 24px;
+  }
+
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .field input {
+    width: 100%;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 12px 14px;
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .field input:focus {
+    outline: none;
+    box-shadow: 3px 3px 0 var(--accent, var(--indigo));
+  }
+
+  button[type="submit"] {
+    width: 100%;
+    padding: 16px;
+    background: var(--yellow);
+    color: var(--ink);
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 5px 5px 0 var(--ink);
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+  }
+  button[type="submit"]:hover { transform: translate(2px, 2px); box-shadow: 3px 3px 0 var(--ink); }
+  button[type="submit"]:focus-visible { outline: 3px solid var(--indigo); outline-offset: 2px; }
+
+  .result {
+    border: 3px solid var(--ink);
+    border-radius: 20px;
+    padding: 24px;
+    background: var(--accent-bg, var(--indigo));
+    color: white;
+    box-shadow: 7px 7px 0 var(--ink);
+  }
+  .result-figure {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 52px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 2px;
+  }
+  .result-label { font-size: 13px; opacity: 0.85; margin: 0 0 18px; }
+  .result-line {
+    font-size: 14px;
+    padding: 10px 0;
+    border-top: 2px solid rgba(255,255,255,0.25);
+    display: flex;
+    justify-content: space-between;
+  }
+  .result-line strong { font-family: 'Space Grotesk', sans-serif; font-size: 16px; }
+
+  .back-link {
+    display: inline-block;
+    margin-top: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .back-link:hover { color: var(--indigo); }
+
+  .tool-links { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+  .tool-links a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-decoration: none;
+    color: white;
+    padding: 22px;
+    border: 3px solid var(--ink);
+    border-radius: 20px;
+    box-shadow: 6px 6px 0 var(--ink);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+  }
+  .tool-links a:hover { transform: translate(2px, 2px); box-shadow: 4px 4px 0 var(--ink); }
+  .tool-links li:nth-child(1) a { background: var(--indigo); }
+  .tool-links li:nth-child(2) a { background: var(--coral); }
+  .tool-links .desc {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    opacity: 0.9;
+    margin-top: 4px;
+  }
+  .tool-links .arrow { font-size: 22px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    button[type="submit"], .tool-links a { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="masthead">
+   <a href="/">Campus Tools</a>
+   <a href="/help/" style="font-size:13px; font-weight:600; color:var(--ink-soft); text-decoration:none;">Help</a>
+  </div>
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>
