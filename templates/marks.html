@@ -23,6 +23,7 @@
 <div class="result" style="background: #FF3D71;">
   <p class="result-figure">{{ result.total }} / 20</p>
   <p class="result-label">Total internal marks (series tests)</p>
+  <p style="font-size:13px; margin-top:12px; opacity:0.9;">{{ result.message }}</p>
 
   {% if result.s1 is not None %}
   <div class="result-line">

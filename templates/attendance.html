@@ -15,6 +15,10 @@
     <label>Classes attended</label>
     <input type="number" name="attended" step="1" min="0" required>
   </div>
+  <div class="field">
+    <label>Classes you plan to miss (optional)</label>
+    <input type="number" name="skip" step="1" min="0" value="0">
+  </div>
   <button type="submit">Calculate</button>
 </form>
 
@@ -22,6 +26,13 @@
 <div class="result" style="background: {% if result.percentage < 75 %}#FF3D71{% else %}#3D5AFE{% endif %};">
   <p class="result-figure">{{ result.percentage }}%</p>
   <p class="result-label">Your current attendance</p>
+   
+  {% if result.new_percentage %}
+    <div class="result-line">
+      <span>New attendance if you skip {{ result.skip }} class(es)</span>
+      <strong>{{ result.new_percentage }}%</strong>
+    </div>
+  {% endif %}
 
   {% if result.classes_needed > 0 %}
     <div class="result-line">
@@ -30,7 +41,7 @@
     </div>
   {% else %}
     <div class="result-line">
-      <span>Classes you can still skip</span>
+      <span>Classes you can still skip(to get 75% boder)</span>
       <strong>{{ result.classes_can_miss }}</strong>
     </div>
   {% endif %}
