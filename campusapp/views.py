@@ -59,3 +59,33 @@ def marks_calculator(request):
 
         result = {'s1': s1, 's2': s2, 'total': total, 'message': message}
     return render(request, 'marks.html', {'result': result})
+
+GRADE_TIERS = [
+    ('S', 90), ('A+', 85), ('A', 80), ('B+', 75), ('B', 70),
+    ('C+', 65), ('C', 60), ('D', 55), ('P (Pass)', 50),
+]
+
+def grade_calculator(request):
+    subjects = []
+    if request.method == 'POST':
+        for i in range(1, 7):
+            name = request.POST.get(f'subject{i}', '').strip()
+            internal_raw = request.POST.get(f'internal{i}', '').strip()
+            if not name or not internal_raw:
+                continue
+            try:
+                internal = float(internal_raw)
+            except ValueError:
+                continue
+            if internal < 0 or internal > 40:
+                continue
+
+            tiers = []
+            for label, threshold in GRADE_TIERS:
+                needed = max(24, threshold - internal)
+                if needed > 60:
+                    tiers.append({'label': label, 'needed': None})
+                else:
+                    tiers.append({'label': label, 'needed': round(needed, 1)})
+            subjects.append({'name': name, 'internal': internal, 'tiers': tiers})
+    return render(request, 'grade.html', {'subjects': subjects})

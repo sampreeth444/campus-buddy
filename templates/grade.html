@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Grade Calculator{% endblock %}
+{% block content %}
+<style>:root { --accent: #FFD23F; }</style>
+<h1>Grade<br>predictor</h1>
+<p class="subtitle">Full internal (out of 40) — external needed per grade, based on KTU 2024 scheme.</p>
+
+<form method="POST" action="#results" class="card">
+  {% csrf_token %}
+  {% for i in "123456" %}
+  <div class="field">
+    <label>Subject {{ i }} name</label>
+    <input type="text" name="subject{{ i }}" placeholder="e.g. Data Structures">
+  </div>
+  <div class="field">
+    <label>Internal (CIE) mark, out of 40</label>
+    <input type="number" name="internal{{ i }}" step="1" min="0" max="40">
+  </div>
+  {% endfor %}
+  <button type="submit">Calculate</button>
+</form>
+
+{% if subjects %}
+<div id="results"></div>
+{% for s in subjects %}
+<div class="result" style="background:#111319; margin-bottom:16px;">
+  <p class="result-figure" style="font-size:22px;">{{ s.name }}</p>
+  <p class="result-label">Internal: {{ s.internal }} / 40</p>
+  {% for t in s.tiers %}
+    <div class="result-line">
+      <span>{{ t.label }}</span>
+      {% if t.needed == None %}
+        <strong style="color:#FF3D71;">Not possible</strong>
+      {% else %}
+        <strong>{{ t.needed }} / 60</strong>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endfor %}
+<p style="font-size:13px; color:var(--ink-soft);">Note: minimum 24/60 in external is required regardless of internal marks (hard rule) — shown values already account for this.</p>
+{% endif %}
+
+<a href="/" class="back-link">← Back to home</a>
+{% endblock %}
