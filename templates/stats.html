@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Stats{% endblock %}
+{% block content %}
+<h1>Visit<br>counts</h1>
+<p class="subtitle">Page opens since the last deploy. No IPs, no names.</p>
+
+<div class="card">
+  {% for v in visits %}
+  <div class="result-line" style="border-top:2px solid #111319; color:#111319;">
+    <span>{{ v.page }}</span>
+    <strong>{{ v.count }}</strong>
+  </div>
+  {% empty %}
+  <p>No visits recorded yet.</p>
+  {% endfor %}
+</div>
+
+<a href="/" class="back-link">← Back to home</a>
+{% endblock %}
