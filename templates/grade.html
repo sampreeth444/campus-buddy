@@ -1,45 +1,93 @@
 {% extends 'base.html' %}
 {% block title %}Grade Calculator{% endblock %}
 {% block content %}
-<style>:root { --accent: #FFD23F; }</style>
+<style>
+  :root { --accent: #FFD23F; }
+  [hidden] { display: none !important; }
+  .note { font-size: 13px; background: #FFF4C2; border: 2px solid var(--ink); border-radius: 12px; padding: 10px 12px; margin: 0 0 18px; }
+  .subject-block { padding: 16px 0; border-top: 2px solid var(--ink); }
+  .subject-block:first-of-type { border-top: none; padding-top: 0; }
+  .grade-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 10px; }
+  .grade-grid .field { margin-bottom: 0; }
+  .grade-grid .field input { font-size: 18px; padding: 10px 8px; }
+  .add-btn { width: 100%; padding: 12px; margin: 4px 0 18px; background: #fff; border: 3px dashed var(--ink); border-radius: 14px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; color: var(--ink); cursor: pointer; }
+  .add-btn:hover { background: var(--yellow); }
+  .error-msg { color: #FF3D71; font-weight: 600; font-size: 14px; margin: 0 0 10px; }
+  .hint { font-size: 12px; color: var(--ink-soft); margin: 6px 0 0; }
+</style>
+
 <h1>Grade<br>predictor</h1>
-<p class="subtitle">Full internal (out of 40) — external needed per grade, based on KTU 2024 scheme.</p>
+<p class="subtitle">Enter your internal marks and see the external marks you need for each grade.</p>
 
 <form method="POST" action="#results" class="card">
   {% csrf_token %}
-  {% for i in "123456" %}
-  <div class="field">
-    <label>Subject {{ i }} name</label>
-    <input type="text" name="subject{{ i }}" placeholder="e.g. Data Structures">
-  </div>
-  <div class="field">
-    <label>Internal (CIE) mark, out of 40</label>
-    <input type="number" name="internal{{ i }}" step="1" min="0" max="40">
+  <p class="note">Use your full internal mark out of 40, not just the series test total.</p>
+
+  {% for r in rows %}
+  <div class="subject-block" {% if not r.show %}hidden{% endif %}>
+    <div class="grade-grid">
+      <div class="field">
+        <label>Subject {{ r.i }} (optional)</label>
+        <input type="text" name="subject{{ r.i }}" value="{{ r.name }}" placeholder="e.g. Data Structures">
+      </div>
+      <div class="field">
+        <label>Internal / 40</label>
+        <input type="number" name="internal{{ r.i }}" value="{{ r.internal }}" step="1" min="0" max="40" inputmode="numeric">
+      </div>
+    </div>
   </div>
   {% endfor %}
+
+  <button type="button" class="add-btn" id="add-subject">+ Add subject</button>
   <button type="submit">Calculate</button>
 </form>
 
-{% if subjects %}
 <div id="results"></div>
+
+{% for e in errors %}
+<p class="error-msg">{{ e }}</p>
+{% endfor %}
+
 {% for s in subjects %}
 <div class="result" style="background:#111319; margin-bottom:16px;">
-  <p class="result-figure" style="font-size:22px;">{{ s.name }}</p>
-  <p class="result-label">Internal: {{ s.internal }} / 40</p>
+  <p class="result-figure" style="font-size:24px;">{{ s.name }}</p>
+  <p class="result-label">Internal: {{ s.internal }} / 40 · External marks needed (out of 60)</p>
   {% for t in s.tiers %}
-    <div class="result-line">
-      <span>{{ t.label }}</span>
-      {% if t.needed == None %}
-        <strong style="color:#FF3D71;">Not possible</strong>
-      {% else %}
-        <strong>{{ t.needed }} / 60</strong>
-      {% endif %}
-    </div>
+  <div class="result-line">
+    <span>{{ t.label }}</span>
+    {% if t.needed is None %}
+      <strong style="color:#FF3D71;">Not possible</strong>
+    {% else %}
+      <strong>{{ t.needed }} / 60</strong>
+    {% endif %}
+  </div>
   {% endfor %}
 </div>
 {% endfor %}
-<p style="font-size:13px; color:var(--ink-soft);">Note: minimum 24/60 in external is required regardless of internal marks (hard rule) — shown values already account for this.</p>
+
+{% if subjects %}
+<p class="hint">At least 24 out of 60 in the external exam is always needed to pass.</p>
 {% endif %}
 
 <a href="/" class="back-link">← Back to home</a>
+
+<script>
+  (function () {
+    var btn = document.getElementById('add-subject');
+    if (!btn) return;
+    function refresh() {
+      btn.hidden = document.querySelectorAll('.subject-block[hidden]').length === 0;
+    }
+    btn.addEventListener('click', function () {
+      var next = document.querySelector('.subject-block[hidden]');
+      if (next) {
+        next.hidden = false;
+        var field = next.querySelector('input');
+        if (field) field.focus();
+      }
+      refresh();
+    });
+    refresh();
+  })();
+</script>
 {% endblock %}

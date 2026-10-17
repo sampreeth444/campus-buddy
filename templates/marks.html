@@ -1,44 +1,140 @@
 {% extends 'base.html' %}
 {% block title %}Internal Marks Calculator{% endblock %}
 {% block content %}
-{% if error %}<p style="color:#FF3D71; font-weight:600;">{{ error }}</p>{% endif %}
-<style>:root { --accent: #FF3D71; --accent-bg: #FF3D71; }</style>
-<h1>Internal<br>marks</h1>
-<p class="subtitle">Enter one or both series tests — scaled instantly.</p>
+<style>
+  :root { --accent: #FF3D71; }
+  [hidden] { display: none !important; }
+  .mode-tabs { display: flex; background: #fff; border: 3px solid var(--ink); border-radius: 14px; overflow: hidden; box-shadow: 5px 5px 0 var(--ink); margin-bottom: 26px; }
+  .mode-tabs a { flex: 1; text-align: center; padding: 13px 8px; text-decoration: none; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; color: var(--ink); }
+  .mode-tabs a + a { border-left: 3px solid var(--ink); }
+  .mode-tabs a.active { background: var(--coral); color: #fff; }
+  .hint { font-size: 12px; color: var(--ink-soft); margin: 6px 0 0; }
+  .note { font-size: 13px; background: #FFF4C2; border: 2px solid var(--ink); border-radius: 12px; padding: 10px 12px; margin: 0 0 18px; }
+  .subject-block { padding: 18px 0; border-top: 2px solid var(--ink); }
+  .subject-block:first-of-type { border-top: none; padding-top: 0; }
+  .subject-block .field { margin-bottom: 10px; }
+  .num-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .num-grid .field { margin-bottom: 0; }
+  .num-grid .field input { font-size: 18px; padding: 10px 8px; }
+  .add-btn { width: 100%; padding: 12px; margin: 4px 0 18px; background: #fff; border: 3px dashed var(--ink); border-radius: 14px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; color: var(--ink); cursor: pointer; }
+  .add-btn:hover { background: var(--yellow); }
+  .error-msg { color: #FF3D71; font-weight: 600; font-size: 14px; margin: 0 0 10px; }
+  .res-block { padding: 16px 0; border-top: 2px solid rgba(255,255,255,0.3); }
+  .res-name { font-weight: 700; font-size: 17px; margin: 0 0 8px; }
+  .res-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 5px 0; font-size: 15px; }
+  .res-line strong { font-family: 'Space Grotesk', sans-serif; font-size: 18px; }
+  .res-line.total { padding-top: 10px; }
+  .res-line.total strong { font-size: 34px; }
+  .res-text { font-size: 13px; margin: 10px 0 0; opacity: 0.95; }
+</style>
 
-<form method="POST" class="card">
+<h1>Internal<br>marks</h1>
+<p class="subtitle">Series test marks, scaled instantly.</p>
+
+<div class="mode-tabs">
+  <a href="/marks/" class="{% if mode == 'one' %}active{% endif %}" {% if mode == 'one' %}aria-current="page"{% endif %}>One subject</a>
+  <a href="/marks/?mode=all" class="{% if mode == 'all' %}active{% endif %}" {% if mode == 'all' %}aria-current="page"{% endif %}>All subjects</a>
+</div>
+
+<form method="POST" action="#results" class="card">
   {% csrf_token %}
-  <div class="field">
-    <label>Series Test 1 (out of 40)</label>
-    <input type="number" name="test1" step="1" min="0" max="40">
-  </div>
-  <div class="field">
-    <label>Series Test 2 (out of 40)</label>
-    <input type="number" name="test2" step="1" min="0" max="40">
-  </div>
+  <input type="hidden" name="mode" value="{{ mode }}">
+
+  {% if mode == 'one' %}
+    {% with r=rows.0 %}
+    <div class="field">
+      <label>Series Test 1 (out of 40)</label>
+      <input type="number" name="test1_1" value="{{ r.test1 }}" step="1" min="0" max="40" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>Series Test 2 (out of 40)</label>
+      <input type="number" name="test2_1" value="{{ r.test2 }}" step="1" min="0" max="40" inputmode="numeric">
+      <p class="hint">Only taken one test so far? Leave the other blank.</p>
+    </div>
+    {% endwith %}
+  {% else %}
+    <p class="note">Fill only the subjects you need, blank rows are ignored. Only one test taken? Leave the other box blank.</p>
+    {% for r in rows %}
+    <div class="subject-block" {% if not r.show %}hidden{% endif %}>
+      <div class="field">
+        <label>Subject {{ r.i }} name (optional)</label>
+        <input type="text" name="subject{{ r.i }}" value="{{ r.name }}" placeholder="e.g. Data Structures">
+      </div>
+      <div class="num-grid">
+        <div class="field">
+          <label>Test 1 (out of 40)</label>
+          <input type="number" name="test1_{{ r.i }}" value="{{ r.test1 }}" step="1" min="0" max="40" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label>Test 2 (out of 40)</label>
+          <input type="number" name="test2_{{ r.i }}" value="{{ r.test2 }}" step="1" min="0" max="40" inputmode="numeric">
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    <button type="button" class="add-btn" id="add-subject">+ Add subject</button>
+  {% endif %}
+
   <button type="submit">Calculate</button>
 </form>
 
-{% if result %}
-<div class="result" style="background: #FF3D71;">
-  <p class="result-figure">{{ result.total }} / 20</p>
-  <p class="result-label">Total internal marks (series tests)</p>
-  <p style="font-size:13px; margin-top:12px; opacity:0.9;">{{ result.message }}</p>
+<div id="results"></div>
 
-  {% if result.s1 is not None %}
-  <div class="result-line">
-    <span>Series Test 1 scaled</span>
-    <strong>{{ result.s1 }} / 10</strong>
+{% for e in errors %}
+<p class="error-msg">{{ e }}</p>
+{% endfor %}
+
+{% if results %}
+<div class="result" style="background:#FF3D71;">
+  <p class="result-label">Each test is scaled to 10 marks. Maximum total is 20.</p>
+  {% for r in results %}
+  <div class="res-block">
+    {% if mode == 'all' %}<p class="res-name">{{ r.name }}</p>{% endif %}
+
+    {% if r.s1 is not None %}
+    <div class="res-line">
+      <span>Series Test 1</span>
+      <strong>{{ r.s1 }} / 10</strong>
+    </div>
+    {% endif %}
+    {% if r.s2 is not None %}
+    <div class="res-line">
+      <span>Series Test 2</span>
+      <strong>{{ r.s2 }} / 10</strong>
+    </div>
+    {% endif %}
+    <div class="res-line total">
+      <span>Total</span>
+      <strong>{{ r.total }} / 20</strong>
+    </div>
+
+    {% if mode == 'one' %}
+    <p class="res-text">{{ r.message }}</p>
+    {% endif %}
   </div>
-  {% endif %}
-  {% if result.s2 is not None %}
-  <div class="result-line">
-    <span>Series Test 2 scaled</span>
-    <strong>{{ result.s2 }} / 10</strong>
-  </div>
-  {% endif %}
+  {% endfor %}
 </div>
 {% endif %}
 
 <a href="/" class="back-link">← Back to home</a>
+
+<script>
+  (function () {
+    var btn = document.getElementById('add-subject');
+    if (!btn) return;
+    function refresh() {
+      btn.hidden = document.querySelectorAll('.subject-block[hidden]').length === 0;
+    }
+    btn.addEventListener('click', function () {
+      var next = document.querySelector('.subject-block[hidden]');
+      if (next) {
+        next.hidden = false;
+        var field = next.querySelector('input');
+        if (field) field.focus();
+      }
+      refresh();
+    });
+    refresh();
+  })();
+</script>
 {% endblock %}

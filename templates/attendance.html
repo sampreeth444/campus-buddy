@@ -1,52 +1,156 @@
 {% extends 'base.html' %}
 {% block title %}Attendance Calculator{% endblock %}
 {% block content %}
-{% if error %}<p style="color:#FF3D71; font-weight:600;">{{ error }}</p>{% endif %}
-<style>:root { --accent: #3D5AFE; --accent-bg: #3D5AFE; }</style>
+<style>
+  :root { --accent: #3D5AFE; }
+  [hidden] { display: none !important; }
+  .mode-tabs { display: flex; background: #fff; border: 3px solid var(--ink); border-radius: 14px; overflow: hidden; box-shadow: 5px 5px 0 var(--ink); margin-bottom: 26px; }
+  .mode-tabs a { flex: 1; text-align: center; padding: 13px 8px; text-decoration: none; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; color: var(--ink); }
+  .mode-tabs a + a { border-left: 3px solid var(--ink); }
+  .mode-tabs a.active { background: var(--indigo); color: #fff; }
+  .hint { font-size: 12px; color: var(--ink-soft); margin: 6px 0 0; }
+  .leave-box { background: #FFF4C2; border: 3px solid var(--ink); border-radius: 14px; padding: 16px; margin-bottom: 18px; }
+  .leave-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 17px; margin: 0 0 12px; }
+  .note { font-size: 13px; background: #FFF4C2; border: 2px solid var(--ink); border-radius: 12px; padding: 10px 12px; margin: 0 0 18px; }
+  .subject-block { padding: 18px 0; border-top: 2px solid var(--ink); }
+  .subject-block:first-of-type { border-top: none; padding-top: 0; }
+  .subject-block .field { margin-bottom: 10px; }
+  .num-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .num-grid .field { margin-bottom: 0; }
+  .num-grid .field input { font-size: 18px; padding: 10px 8px; }
+  .add-btn { width: 100%; padding: 12px; margin: 4px 0 18px; background: #fff; border: 3px dashed var(--ink); border-radius: 14px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; color: var(--ink); cursor: pointer; }
+  .add-btn:hover { background: var(--yellow); }
+  .error-msg { color: #FF3D71; font-weight: 600; font-size: 14px; margin: 0 0 10px; }
+  .res-block { padding: 16px 0; border-top: 2px solid rgba(255,255,255,0.25); }
+  .res-name { font-weight: 700; font-size: 17px; margin: 0 0 8px; }
+  .res-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 6px 0; font-size: 15px; }
+  .res-line strong { font-family: 'Space Grotesk', sans-serif; font-size: 30px; }
+  .res-line strong.good { color: #FFD23F; }
+  .res-line strong.mid { color: #FF9F43; }
+  .res-line strong.bad { color: #FF3D71; }
+  .res-text { font-size: 14px; margin: 10px 0 0; }
+</style>
+
 <h1>Attendance<br>check</h1>
-<p class="subtitle">See where you stand right now.</p>
-<form method="POST" class="card">
+<p class="subtitle">Taking a leave? See what happens to your attendance before you do.</p>
+
+<div class="mode-tabs">
+  <a href="/attendance/" class="{% if mode == 'one' %}active{% endif %}" {% if mode == 'one' %}aria-current="page"{% endif %}>One subject</a>
+  <a href="/attendance/?mode=all" class="{% if mode == 'all' %}active{% endif %}" {% if mode == 'all' %}aria-current="page"{% endif %}>All subjects</a>
+</div>
+
+<form method="POST" action="#results" class="card">
   {% csrf_token %}
-  <div class="field">
-    <label>Total classes held</label>
-    <input type="number" name="total" step="1" min="0" required>
-  </div>
-  <div class="field">
-    <label>Classes attended</label>
-    <input type="number" name="attended" step="1" min="0" required>
-  </div>
-  <div class="field">
-    <label>Classes you plan to miss (optional)</label>
-    <input type="number" name="skip" step="1" min="0" value="0">
-  </div>
+  <input type="hidden" name="mode" value="{{ mode }}">
+
+  {% if mode == 'one' %}
+    {% with r=rows.0 %}
+    <div class="field">
+      <label>Total classes held so far</label>
+      <input type="number" name="total1" value="{{ r.total }}" step="1" min="0" inputmode="numeric">
+      <p class="hint">Classes conducted till today, not the whole semester.</p>
+    </div>
+    <div class="field">
+      <label>Classes you attended</label>
+      <input type="number" name="attended1" value="{{ r.attended }}" step="1" min="0" inputmode="numeric">
+    </div>
+    <div class="leave-box">
+      <p class="leave-title">Taking a leave?</p>
+      <div class="field" style="margin-bottom:0;">
+        <label>How many classes will you miss?</label>
+        <input type="number" name="skip1" value="{{ r.skip }}" step="1" min="0" inputmode="numeric" placeholder="0">
+        <p class="hint">Taking leave tomorrow? Enter how many classes you will miss.</p>
+      </div>
+    </div>
+    {% endwith %}
+  {% else %}
+    <p class="note">Fill only the subjects you need, blank rows are ignored. Taking a leave? Enter the number of classes you'll miss in the <strong>Leave</strong> box.</p>
+    {% for r in rows %}
+    <div class="subject-block" {% if not r.show %}hidden{% endif %}>
+      <div class="field">
+        <label>Subject {{ r.i }} name (optional)</label>
+        <input type="text" name="subject{{ r.i }}" value="{{ r.name }}" placeholder="e.g. Data Structures">
+      </div>
+      <div class="num-grid">
+        <div class="field">
+          <label>Total held</label>
+          <input type="number" name="total{{ r.i }}" value="{{ r.total }}" step="1" min="0" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label>Attended</label>
+          <input type="number" name="attended{{ r.i }}" value="{{ r.attended }}" step="1" min="0" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label>Leave</label>
+          <input type="number" name="skip{{ r.i }}" value="{{ r.skip }}" step="1" min="0" inputmode="numeric" placeholder="0">
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    <button type="button" class="add-btn" id="add-subject">+ Add subject</button>
+  {% endif %}
+
   <button type="submit">Calculate</button>
 </form>
 
-{% if result %}
-<div class="result" style="background: {% if result.percentage < 75 %}#FF3D71{% else %}#3D5AFE{% endif %};">
-  <p class="result-figure">{{ result.percentage }}%</p>
-  <p class="result-label">Your current attendance</p>
-   
-  {% if result.new_percentage %}
-    <div class="result-line">
-      <span>New attendance if you skip {{ result.skip }} class(es)</span>
-      <strong>{{ result.new_percentage }}%</strong>
-    </div>
-  {% endif %}
+<div id="results"></div>
 
-  {% if result.classes_needed > 0 %}
-    <div class="result-line">
-      <span>Must attend in a row to hit 75%</span>
-      <strong>{{ result.classes_needed }}</strong>
+{% for e in errors %}
+<p class="error-msg">{{ e }}</p>
+{% endfor %}
+
+{% if results %}
+<div class="result" style="background:#111319;">
+  <p class="result-label">75% needed to write the exam · 85% or more gives 5 attendance marks</p>
+  {% for r in results %}
+  <div class="res-block">
+    {% if mode == 'all' %}<p class="res-name">{{ r.name }}</p>{% endif %}
+
+    <div class="res-line">
+      <span>Current attendance</span>
+      <strong class="{% if r.now_level == 'full' %}good{% elif r.now_level == 'ok' %}mid{% else %}bad{% endif %}">{{ r.now_pct }}%</strong>
     </div>
-  {% else %}
-    <div class="result-line">
-      <span>Classes you can still skip(to get 75% boder)</span>
-      <strong>{{ result.classes_can_miss }}</strong>
+
+    {% if r.has_leave %}
+    <div class="res-line">
+      <span>Attendance after the leave</span>
+      <strong class="{% if r.new_level == 'full' %}good{% elif r.new_level == 'ok' %}mid{% else %}bad{% endif %}">{{ r.new_pct }}%</strong>
     </div>
-  {% endif %}
+    {% endif %}
+
+    <p class="res-text">
+      {% if r.level == 'full' %}
+        {% if r.spare == 0 %}5 attendance marks safe, but don't miss any more classes.{% else %}5 attendance marks safe. You can still miss {{ r.spare }} more class{{ r.spare|pluralize:"es" }} and keep them.{% endif %}
+      {% elif r.level == 'ok' %}
+        Below 85%, so you lose the full 5 attendance marks. Attend the next {{ r.need }} class{{ r.need|pluralize:"es" }} in a row to get back to 85%.
+      {% else %}
+        Below 75%, you won't be allowed to write the exam. Attend the next {{ r.need }} class{{ r.need|pluralize:"es" }} in a row to get back to 75%.
+      {% endif %}
+    </p>
+  </div>
+  {% endfor %}
 </div>
 {% endif %}
 
 <a href="/" class="back-link">← Back to home</a>
+
+<script>
+  (function () {
+    var btn = document.getElementById('add-subject');
+    if (!btn) return;
+    function refresh() {
+      btn.hidden = document.querySelectorAll('.subject-block[hidden]').length === 0;
+    }
+    btn.addEventListener('click', function () {
+      var next = document.querySelector('.subject-block[hidden]');
+      if (next) {
+        next.hidden = false;
+        var field = next.querySelector('input');
+        if (field) field.focus();
+      }
+      refresh();
+    });
+    refresh();
+  })();
+</script>
 {% endblock %}
