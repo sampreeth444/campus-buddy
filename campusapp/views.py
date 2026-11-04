@@ -1,4 +1,5 @@
 import os
+from functools import wraps
 
 from django.db.models import F
 from django.http import Http404
@@ -6,25 +7,43 @@ from django.shortcuts import render
 
 from .models import PageVisit
 
-
-def count_visit(request, page):
-    """Count one page open. Skips form submissions and UptimeRobot pings."""
-    if request.method != 'GET':
-        return
-    agent = request.META.get('HTTP_USER_AGENT', '').lower()
-    if 'uptimerobot' in agent:
-        return
-    visit, _ = PageVisit.objects.get_or_create(page=page)
-    PageVisit.objects.filter(pk=visit.pk).update(count=F('count') + 1)
+BOT_WORDS = (
+    'bot', 'crawl', 'spider', 'preview', 'whatsapp', 'telegram', 'slack',
+    'facebookexternalhit', 'uptimerobot', 'monitor', 'curl', 'python-requests', 'headless',
+)
+VISIT_WINDOW = 12 * 60 * 60  # count one browser once per page every 12 hours
 
 
+def counted(page):
+    """Count a page once per browser per 12 hours.
+    Skips bots, link previews, UptimeRobot and the owner's own browser."""
+    def decorator(view):
+        @wraps(view)
+        def wrapper(request, *args, **kwargs):
+            response = view(request, *args, **kwargs)
+            if request.method != 'GET' or request.COOKIES.get('no_count'):
+                return response
+            agent = request.META.get('HTTP_USER_AGENT', '').lower()
+            if not agent or any(word in agent for word in BOT_WORDS):
+                return response
+            cookie_name = f'seen_{page}'
+            if request.COOKIES.get(cookie_name):
+                return response
+            visit, _ = PageVisit.objects.get_or_create(page=page)
+            PageVisit.objects.filter(pk=visit.pk).update(count=F('count') + 1)
+            response.set_cookie(cookie_name, '1', max_age=VISIT_WINDOW, httponly=True, samesite='Lax')
+            return response
+        return wrapper
+    return decorator
+
+
+@counted('home')
 def home(request):
-    count_visit(request, 'home')
     return render(request, 'home.html')
 
 
+@counted('help')
 def help_page(request):
-    count_visit(request, 'help')
     return render(request, 'help.html')
 
 
@@ -45,8 +64,8 @@ def attendance_level(attended, total):
     return {'level': 'low', 'spare': 0, 'need': 3 * total - 4 * attended}
 
 
+@counted('attendance')
 def attendance_calculator(request):
-    count_visit(request, 'attendance')
     posted = request.method == 'POST'
     mode = request.POST.get('mode') if posted else request.GET.get('mode')
     mode = 'all' if mode == 'all' else 'one'
@@ -116,8 +135,8 @@ def attendance_calculator(request):
     })
 
 
+@counted('marks')
 def marks_calculator(request):
-    count_visit(request, 'marks')
     posted = request.method == 'POST'
     mode = request.POST.get('mode') if posted else request.GET.get('mode')
     mode = 'all' if mode == 'all' else 'one'
@@ -189,8 +208,8 @@ GRADE_TIERS = [
 ]
 
 
+@counted('grade')
 def grade_calculator(request):
-    count_visit(request, 'grade')
     posted = request.method == 'POST'
     rows = []
     subjects = []
@@ -246,4 +265,8 @@ def stats(request):
     if not secret or request.GET.get('key') != secret:
         raise Http404()
     visits = PageVisit.objects.order_by('-count')
-    return render(request, 'stats.html', {'visits': visits})
+    total = sum(v.count for v in visits)
+    response = render(request, 'stats.html', {'visits': visits, 'total': total})
+    # Marks this browser as "the owner" so your own visits are never counted.
+    response.set_cookie('no_count', '1', max_age=365 * 24 * 60 * 60, httponly=True, samesite='Lax')
+    return response
